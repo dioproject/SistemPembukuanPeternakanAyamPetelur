@@ -114,13 +114,18 @@ function hitungStokAyam(kandangId) {
 function getRingkasanStok() {
   try {
     const kandangList = getAllKandang().filter(k => k['Status'] === 'Aktif');
+    const semuaInventaris = getAllInventaris();
     const ringkasan = [];
     
     let totalAyam = 0;
     
     kandangList.forEach(kandang => {
       try {
-        const stok = hitungStokAyam(kandang['ID']);
+        const dataKandang = semuaInventaris.filter(i => i['ID Kandang'] === kandang['ID']);
+        let stok = 0;
+        if (dataKandang.length > 0) {
+          stok = dataKandang[dataKandang.length - 1]['Sisa Ayam'] || 0;
+        }
         totalAyam += stok;
         ringkasan.push({
           id: kandang['ID'],

@@ -180,13 +180,18 @@ function hitungMortalitas(kandangId) {
 function hitungMortalitasKeseluruhan() {
   try {
     const kandangList = getAllKandang().filter(k => k['Status'] === 'Aktif');
+    const semuaKematian = getAllKematian();
     let totalKematian = 0;
     let totalKapasitas = 0;
     
     kandangList.forEach(kandang => {
       try {
-        const kematian = hitungTotalKematianKandang(kandang['ID']);
-        totalKematian += kematian.total;
+        const dataKandang = semuaKematian.filter(k => k['ID Kandang'] === kandang['ID']);
+        let kematianTotal = 0;
+        dataKandang.forEach(k => {
+          kematianTotal += k['Jumlah'] || 0;
+        });
+        totalKematian += kematianTotal;
         totalKapasitas += kandang['Kapasitas'];
       } catch (e) {
         Logger.log('Error hitungTotalKematianKandang ' + kandang['ID'] + ': ' + e.message);

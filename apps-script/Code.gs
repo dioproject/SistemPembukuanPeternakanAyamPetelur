@@ -143,9 +143,17 @@ function formatRupiah(angka) {
 }
 
 /**
- * Mendapatkan data dari sheet
+ * Mendapatkan data dari sheet (dengan caching)
  */
 function getSheetData(sheetName) {
+  const cache = CacheService.getScriptCache();
+  const cacheKey = 'sheet_' + sheetName;
+  const cached = cache.get(cacheKey);
+  
+  if (cached) {
+    return JSON.parse(cached);
+  }
+  
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) {
     throw new Error('Spreadsheet tidak ditemukan. Pastikan script terhubung ke spreadsheet.');
@@ -160,13 +168,41 @@ function getSheetData(sheetName) {
   const headers = data[0];
   const rows = data.slice(1);
   
-  return rows.map(row => {
+  const result = rows.map(row => {
     const obj = {};
     headers.forEach((header, index) => {
       obj[header] = row[index];
     });
     return obj;
   });
+  
+  try {
+    cache.put(cacheKey, JSON.stringify(result), 300);
+  } catch (e) {
+    // data terlalu besar untuk cache, skip
+  }
+  
+  return result;
+}
+
+/**
+ * Hapus cache sheet tertentu atau semua cache
+ */
+function clearSheetCache(sheetName) {
+  const cache = CacheService.getScriptCache();
+  if (sheetName) {
+    cache.remove('sheet_' + sheetName);
+  } else {
+    cache.removeAll([
+      'sheet_Data Kandang',
+      'sheet_Inventaris Ayam',
+      'sheet_Pakan',
+      'sheet_Produksi Telur',
+      'sheet_Kematian',
+      'sheet_Pengeluaran',
+      'sheet_Pemasukan'
+    ]);
+  }
 }
 
 /**
@@ -184,6 +220,7 @@ function addSheetData(sheetName, rowData) {
   }
   
   sheet.appendRow(rowData);
+  clearSheetCache(sheetName);
   return true;
 }
 
@@ -208,6 +245,7 @@ function updateSheetData(sheetName, id, newData) {
     if (data[i][idColumn] === id) {
       const range = sheet.getRange(i + 1, 1, 1, newData.length);
       range.setValues([newData]);
+      clearSheetCache(sheetName);
       return true;
     }
   }
@@ -235,6 +273,7 @@ function deleteSheetData(sheetName, id) {
   for (let i = 1; i < data.length; i++) {
     if (data[i][idColumn] === id) {
       sheet.deleteRow(i + 1);
+      clearSheetCache(sheetName);
       return true;
     }
   }
